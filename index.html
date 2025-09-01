@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Options Playground – Black–Scholes (Call)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    .number-input { width: 8rem; }
+    .mono { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <header class="max-w-7xl mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold">Options Playground – Black–Scholes (Call)</h1>
+    <p class="text-sm text-slate-600">Interactive diagrams for teaching option pricing. 100% static; drop this file into GitHub Pages.</p>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 pb-20">
+    <!-- Controls -->
+    <section class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h2 class="font-semibold mb-2">Underlier & Contract</h2>
+        <div class="space-y-3">
+          <label class="block text-sm">Spot S₀
+            <div class="flex items-center gap-2 mt-1">
+              <input id="S0" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="100" />
+              <input id="S0_range" type="range" min="1" max="500" step="1" class="flex-1" value="100" />
+            </div>
+          </label>
+          <label class="block text-sm">Strike K
+            <div class="flex items-center gap-2 mt-1">
+              <input id="K" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="100" />
+              <input id="K_range" type="range" min="1" max="500" step="1" class="flex-1" value="100" />
+            </div>
+          </label>
+          <label class="block text-sm">Days to Expiry T (days)
+            <div class="flex items-center gap-2 mt-1">
+              <input id="T_days" type="number" step="1" class="number-input mono border rounded px-2 py-1" value="30" />
+              <input id="T_days_range" type="range" min="0" max="365" step="1" class="flex-1" value="30" />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h2 class="font-semibold mb-2">Rates & Vol</h2>
+        <div class="space-y-3">
+          <label class="block text-sm">Risk-free r (annual, %)
+            <div class="flex items-center gap-2 mt-1">
+              <input id="r" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="2.00" />
+              <input id="r_range" type="range" min="-5" max="15" step="0.05" class="flex-1" value="2.00" />
+            </div>
+          </label>
+          <label class="block text-sm">Dividend yld q (annual, %)
+            <div class="flex items-center gap-2 mt-1">
+              <input id="q" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="0.00" />
+              <input id="q_range" type="range" min="0" max="10" step="0.05" class="flex-1" value="0.00" />
+            </div>
+          </label>
+          <label class="block text-sm">Vol σ (annual, %)
+            <div class="flex items-center gap-2 mt-1">
+              <input id="sigma" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="20.00" />
+              <input id="sigma_range" type="range" min="1" max="300" step="0.5" class="flex-1" value="20.00" />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h2 class="font-semibold mb-2">Chart Options</h2>
+        <div class="space-y-3">
+          <label class="block text-sm">Spot grid (% of S₀)
+            <div class="grid grid-cols-2 gap-2 mt-1">
+              <div>
+                <span class="text-xs">Min</span>
+                <input id="spot_min" type="number" step="1" class="w-full mono border rounded px-2 py-1" value="50" />
+              </div>
+              <div>
+                <span class="text-xs">Max</span>
+                <input id="spot_max" type="number" step="1" class="w-full mono border rounded px-2 py-1" value="150" />
+              </div>
+            </div>
+          </label>
+          <label class="block text-sm"># of points
+            <input id="npoints" type="number" min="50" max="2000" step="10" class="number-input mono border rounded px-2 py-1 mt-1" value="200" />
+          </label>
+          <label class="block text-sm">Vol bumps for Price vs Spot (abs, %, comma-separated)
+            <input id="vol_bumps" type="text" class="w-full mono border rounded px-2 py-1 mt-1" value="-10,0,10" />
+          </label>
+          <button id="downloadCsv" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white text-sm">Download Price-vs-Spot CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="grid lg:grid-cols-2 gap-6">
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">1) Call Price vs Spot (today)</h3>
+        <div id="chart_price_spot" class="w-full" style="height:360px;"></div>
+      </div>
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">2) Time Decay: Price vs Days (S & σ frozen)</h3>
+        <div id="chart_time_decay" class="w-full" style="height:360px;"></div>
+      </div>
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">3) Delta vs Spot (today)</h3>
+        <div id="chart_delta_spot" class="w-full" style="height:360px;"></div>
+      </div>
+      <div class="p-4 bg-white rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">4) Payoff at Expiry</h3>
+        <div id="chart_payoff" class="w-full" style="height:360px;"></div>
+      </div>
+    </section>
+
+    <footer class="text-xs text-slate-500 mt-8">BSM call with continuous dividend yield. Educational use only.</footer>
+  </main>
+
+  <script>
+    // ---------- Math helpers ----------
+    function yearfracFromDays(d) { return Math.max(0, Number(d)) / 365.0; }
+
+    // erf approximation (Abramowitz–Stegun 7.1.26)
+    function erf(x) {
+      const sign = Math.sign(x) || 1;
+      const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+      const t = 1.0 / (1.0 + p * Math.abs(x));
+      const y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+      return sign * y;
+    }
+    function normCdf(x) { return 0.5 * (1 + erf(x / Math.SQRT2)); }
+
+    // Black–Scholes call with continuous dividend yield
+    function bsCall(S, K, r, q, sigma, T) {
+      S = Math.max(1e-12, Number(S));
+      K = Math.max(1e-12, Number(K));
+      r = Number(r); q = Number(q); sigma = Math.max(1e-12, Number(sigma)); T = Math.max(0, Number(T));
+
+      if (T === 0) {
+        const payoff = Math.max(S - K, 0);
+        const delta = S > K ? 1 : (S < K ? 0 : 0.5);
+        return { price: payoff, delta };
+      }
+      const sqrtT = Math.sqrt(T);
+      const d1 = (Math.log(S/K) + (r - q + 0.5*sigma*sigma)*T) / (sigma*sqrtT);
+      const d2 = d1 - sigma*sqrtT;
+      const Nd1 = normCdf(d1);
+      const Nd2 = normCdf(d2);
+      const discR = Math.exp(-r*T);
+      const discQ = Math.exp(-q*T);
+      const price = S*discQ*Nd1 - K*discR*Nd2;
+      const delta = discQ*Nd1;
+      return { price, delta };
+    }
+
+    // ---------- UI state & bindings ----------
+    const ids = ["S0","K","T_days","r","q","sigma","spot_min","spot_max","npoints","vol_bumps"];
+    const state = Object.fromEntries(ids.map(id => [id, null]));
+
+    function getVal(id) {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      if (id === 'vol_bumps') return el.value;
+      return Number(el.value);
+    }
+
+    function syncPair(idNum, idRange) {
+      const num = document.getElementById(idNum);
+      const rng = document.getElementById(idRange);
+      const sync = (from, to) => () => { to.value = from.value; drawAll(); };
+      num.addEventListener('input', sync(num, rng));
+      rng.addEventListener('input', sync(rng, num));
+    }
+
+    syncPair('S0','S0_range');
+    syncPair('K','K_range');
+    syncPair('T_days','T_days_range');
+    syncPair('r','r_range');
+    syncPair('q','q_range');
+    syncPair('sigma','sigma_range');
+
+    // CSV download (Price vs Spot table at current settings)
+    document.getElementById('downloadCsv').addEventListener('click', () => {
+      const p = currentParams();
+      const { S_grid, traces } = priceVsSpotData(p);
+      // Use first trace only (base sigma) for table; could expand if desired
+      const baseTrace = traces.find(t => t.name.includes('σ=')) || traces[0];
+      const rows = ['S,Price'];
+      for (let i=0; i<S_grid.length; i++) rows.push(`${S_grid[i]},${baseTrace.y[i]}`);
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'price_vs_spot.csv'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ---------- Chart data generators ----------
+    function currentParams() {
+      return {
+        S0: getVal('S0'),
+        K: getVal('K'),
+        T_days: getVal('T_days'),
+        r: getVal('r')/100.0,
+        q: getVal('q')/100.0,
+        sigma0: getVal('sigma')/100.0,
+        spotMinPct: getVal('spot_min')/100.0,
+        spotMaxPct: getVal('spot_max')/100.0,
+        n: Math.max(10, Math.floor(getVal('npoints'))),
+        volBumpsPct: document.getElementById('vol_bumps').value
+          .split(',').map(s=>s.trim()).filter(Boolean).map(Number).map(v=>v/100.0)
+      };
+    }
+
+    function linspace(a, b, n) {
+      const arr = new Array(n);
+      const step = (b - a) / (n - 1);
+      for (let i=0;i<n;i++) arr[i] = a + i*step;
+      return arr;
+    }
+
+    function priceVsSpotData(p) {
+      const T = yearfracFromDays(p.T_days);
+      const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
+      const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
+      const S_grid = linspace(Smin, Smax, p.n);
+      const sigmas = p.volBumpsPct.map(b => Math.max(1e-9, p.sigma0 + b));
+      if (sigmas.length === 0) sigmas.push(p.sigma0);
+      const traces = sigmas.map(sg => {
+        const y = S_grid.map(S => bsCall(S, p.K, p.r, p.q, sg, T).price);
+        return { x: S_grid, y, mode: 'lines', name: `σ=${(sg*100).toFixed(2)}%` };
+      });
+      return { S_grid, traces };
+    }
+
+    function timeDecayData(p) {
+      const days = linspace(0, p.T_days, p.n);
+      const prices = days.map(d => {
+        const T = yearfracFromDays(Math.max(0, p.T_days - d));
+        return bsCall(p.S0, p.K, p.r, p.q, p.sigma0, T).price;
+      });
+      return { x: days, y: prices };
+    }
+
+    function deltaVsSpotData(p) {
+      const T = yearfracFromDays(p.T_days);
+      const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
+      const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
+      const S_grid = linspace(Smin, Smax, p.n);
+      const deltas = S_grid.map(S => bsCall(S, p.K, p.r, p.q, p.sigma0, T).delta);
+      return { x: S_grid, y: deltas };
+    }
+
+    function payoffData(p) {
+      const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
+      const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
+      const S_grid = linspace(Smin, Smax, p.n);
+      const y = S_grid.map(S => Math.max(S - p.K, 0));
+      return { x: S_grid, y };
+    }
+
+    // ---------- Plotting ----------
+    function drawAll() {
+      const p = currentParams();
+
+      // 1) Price vs Spot (multi-vol)
+      const pvs = priceVsSpotData(p);
+      Plotly.react('chart_price_spot', pvs.traces, {
+        margin: { t: 10, r: 10, l: 50, b: 40 },
+        xaxis: { title: 'Spot' },
+        yaxis: { title: 'Call Price' },
+        legend: { orientation: 'h' },
+        hovermode: 'x unified'
+      }, { displayModeBar: false, responsive: true });
+
+      // 2) Time Decay
+      const td = timeDecayData(p);
+      Plotly.react('chart_time_decay', [{ x: td.x, y: td.y, mode: 'lines', name: 'Price' }], {
+        margin: { t: 10, r: 10, l: 50, b: 40 },
+        xaxis: { title: 'Days elapsed' },
+        yaxis: { title: 'Call Price' },
+        hovermode: 'x unified'
+      }, { displayModeBar: false, responsive: true });
+
+      // 3) Delta vs Spot
+      const ds = deltaVsSpotData(p);
+      Plotly.react('chart_delta_spot', [{ x: ds.x, y: ds.y, mode: 'lines', name: 'Δ' }], {
+        margin: { t: 10, r: 10, l: 50, b: 40 },
+        xaxis: { title: 'Spot' },
+        yaxis: { title: 'Delta', range: [0,1] },
+        hovermode: 'x unified'
+      }, { displayModeBar: false, responsive: true });
+
+      // 4) Payoff at Expiry
+      const pf = payoffData(p);
+      Plotly.react('chart_payoff', [{ x: pf.x, y: pf.y, mode: 'lines', name: 'Payoff' }], {
+        margin: { t: 10, r: 10, l: 50, b: 40 },
+        xaxis: { title: 'Spot at Expiry' },
+        yaxis: { title: 'Payoff' },
+        hovermode: 'x unified'
+      }, { displayModeBar: false, responsive: true });
+    }
+
+    // Re-draw on any input change
+    document.addEventListener('input', (e) => {
+      const id = e.target.id; if (!ids.includes(id) && !id.endsWith('_range')) return; drawAll();
+    });
+
+    // Initial draw
+    drawAll();
+
+    // Handle resize
+    window.addEventListener('resize', () => { drawAll(); });
+  </script>
+</body>
+</html>
