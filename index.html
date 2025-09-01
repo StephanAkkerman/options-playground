@@ -444,24 +444,51 @@
 
     // Scenario table generator
     function parseCsvNumbers(str) {
-      return str.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
+      const parts = String(str || '').split(',');
+      const values = [];
+      const invalid = [];
+      parts.forEach((s, i) => {
+        const t = s.trim();
+        if (t === '') { invalid.push(i); return; }
+        const n = Number(t);
+        if (Number.isFinite(n)) values.push(n); else invalid.push(i);
+      });
+      return { values, invalid };
+    }
+
+    function markValidity(id, hasInvalid) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('ring-2', !!hasInvalid);
+      el.classList.toggle('ring-red-500', !!hasInvalid);
     }
 
     document.getElementById('sc_generate').addEventListener('click', () => {
       const p = currentParams();
-      const moves = parseCsvNumbers(document.getElementById('sc_spot_moves').value); // %
-      const bumps = parseCsvNumbers(document.getElementById('sc_vol_bumps').value).map(v=>v/100); // abs % -> frac
+
+      const moves = parseCsvNumbers(document.getElementById('sc_spot_moves').value);
+      const bumps = parseCsvNumbers(document.getElementById('sc_vol_bumps').value);
       const daysE = parseCsvNumbers(document.getElementById('sc_days_elapsed').value);
       const previewN = Math.max(1, Number(document.getElementById('sc_preview_n').value)|0);
+
+      // highlight invalid inputs (trailing commas, text, blanks, etc.)
+      markValidity('sc_spot_moves', moves.invalid.length > 0);
+      markValidity('sc_vol_bumps', bumps.invalid.length > 0);
+      markValidity('sc_days_elapsed', daysE.invalid.length > 0);
+
+      // fallbacks so we still generate something
+      const moveVals = moves.values.length ? moves.values : [0];
+      const bumpVals = bumps.values.length ? bumps.values.map(v=>v/100) : [0];
+      const dayVals  = daysE.values.length ? daysE.values : [0];
 
       const rows = ['type,S,K,r,q,sigma(%),T_init(days),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)'];
       const preview = [];
 
-      for (const m of moves) {
+      for (const m of moveVals) {
         const S = p.S0 * (1 + m/100);
-        for (const b of bumps.length?bumps:[0]) {
+        for (const b of bumpVals) {
           const sig = Math.max(1e-9, p.sigma0 + b);
-          for (const de of daysE) {
+          for (const de of dayVals) {
             const T = yearfracFromDays(Math.max(0, p.T_days - de));
             const g = bsOption(S, p.K, p.r, p.q, sig, T, p.type);
             const row = [p.type, S.toFixed(6), p.K, (p.r*100).toFixed(4), (p.q*100).toFixed(4), (sig*100).toFixed(4), p.T_days, de, T.toFixed(6), m, S.toFixed(6), g.price.toFixed(6), g.delta.toFixed(6), g.gamma.toFixed(8), (g.vega/100).toFixed(6), (g.theta/365).toFixed(6)].join(',');
@@ -473,19 +500,23 @@
 
       // Update preview table
       const tbody = document.getElementById('sc_preview');
-      tbody.innerHTML = preview.map(r => `<tr>
-        <td class="p-1">${r.type}</td>
-        <td class="p-1">${r.S.toFixed(4)}</td>
-        <td class="p-1">${r.sigma.toFixed(2)}</td>
-        <td class="p-1">${r.days}</td>
-        <td class="p-1">${r.price.toFixed(6)}</td>
-        <td class="p-1">${r.delta.toFixed(6)}</td>
-        <td class="p-1">${r.gamma.toFixed(8)}</td>
-        <td class="p-1">${r.vega.toFixed(6)}</td>
-        <td class="p-1">${r.theta.toFixed(6)}</td>
-      </tr>`).join('');
+      if (preview.length === 0) {
+        tbody.innerHTML = '<tr><td class="p-1 text-slate-500" colspan="9">No rows generated — check inputs above.</td></tr>';
+      } else {
+        tbody.innerHTML = preview.map(r => `<tr>
+          <td class=\"p-1\">${r.type}</td>
+          <td class=\"p-1\">${r.S.toFixed(4)}</td>
+          <td class=\"p-1\">${r.sigma.toFixed(2)}</td>
+          <td class=\"p-1\">${r.days}</td>
+          <td class=\"p-1\">${r.price.toFixed(6)}</td>
+          <td class=\"p-1\">${r.delta.toFixed(6)}</td>
+          <td class=\"p-1\">${r.gamma.toFixed(8)}</td>
+          <td class=\"p-1\">${r.vega.toFixed(6)}</td>
+          <td class=\"p-1\">${r.theta.toFixed(6)}</td>
+        </tr>`).join('');
+      }
 
-      downloadCsv(rows.join(''), 'scenario_table.csv');
+      downloadCsv(rows.join('\n'), 'scenario_table.csv');
     });
 
     // Re-draw on any input change (including ranges)
