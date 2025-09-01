@@ -1,120 +1,193 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Options Playground – Black–Scholes (Call)</title>
+  <title>Options Playground – Black–Scholes</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.plotly/plotly-2.35.2.min.js"></script>
+  <script>
+    // Tailwind dark mode via class strategy
+    tailwind.config = { darkMode: 'class' }
+  </script>
   <style>
     .number-input { width: 8rem; }
     .mono { font-variant-numeric: tabular-nums; }
+    .badge { @apply text-xs px-2 py-0.5 rounded-full; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-  <header class="max-w-7xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold">Options Playground – Black–Scholes (Call)</h1>
-    <p class="text-sm text-slate-600">Interactive diagrams for teaching option pricing. 100% static; drop this file into GitHub Pages.</p>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+  <header class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">Options Playground – Black–Scholes</h1>
+      <p class="text-sm text-slate-600 dark:text-slate-400">Interactive diagrams for teaching option pricing. 100% static; drop this file into GitHub Pages.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-sm flex items-center gap-2">
+        <span>Type</span>
+        <select id="opt_type" class="border rounded px-2 py-1 bg-white dark:bg-slate-800">
+          <option value="call" selected>Call</option>
+          <option value="put">Put</option>
+        </select>
+      </label>
+      <button id="toggleDark" class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm">Dark</button>
+    </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 pb-20">
+  <main class="max-w-7xl mx-auto px-4 pb-24">
     <!-- Controls -->
-    <section class="grid md:grid-cols-3 gap-4 mb-6">
-      <div class="p-4 bg-white rounded-2xl shadow">
+    <section class="grid lg:grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h2 class="font-semibold mb-2">Underlier & Contract</h2>
         <div class="space-y-3">
           <label class="block text-sm">Spot S₀
             <div class="flex items-center gap-2 mt-1">
-              <input id="S0" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="100" />
+              <input id="S0" type="number" step="0.01" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="100" />
               <input id="S0_range" type="range" min="1" max="500" step="1" class="flex-1" value="100" />
             </div>
           </label>
           <label class="block text-sm">Strike K
             <div class="flex items-center gap-2 mt-1">
-              <input id="K" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="100" />
+              <input id="K" type="number" step="0.01" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="100" />
               <input id="K_range" type="range" min="1" max="500" step="1" class="flex-1" value="100" />
             </div>
           </label>
           <label class="block text-sm">Days to Expiry T (days)
             <div class="flex items-center gap-2 mt-1">
-              <input id="T_days" type="number" step="1" class="number-input mono border rounded px-2 py-1" value="30" />
+              <input id="T_days" type="number" step="1" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="30" />
               <input id="T_days_range" type="range" min="0" max="365" step="1" class="flex-1" value="30" />
             </div>
           </label>
         </div>
       </div>
 
-      <div class="p-4 bg-white rounded-2xl shadow">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h2 class="font-semibold mb-2">Rates & Vol</h2>
         <div class="space-y-3">
           <label class="block text-sm">Risk-free r (annual, %)
             <div class="flex items-center gap-2 mt-1">
-              <input id="r" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="2.00" />
+              <input id="r" type="number" step="0.01" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="2.00" />
               <input id="r_range" type="range" min="-5" max="15" step="0.05" class="flex-1" value="2.00" />
             </div>
           </label>
           <label class="block text-sm">Dividend yld q (annual, %)
             <div class="flex items-center gap-2 mt-1">
-              <input id="q" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="0.00" />
+              <input id="q" type="number" step="0.01" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="0.00" />
               <input id="q_range" type="range" min="0" max="10" step="0.05" class="flex-1" value="0.00" />
             </div>
           </label>
           <label class="block text-sm">Vol σ (annual, %)
             <div class="flex items-center gap-2 mt-1">
-              <input id="sigma" type="number" step="0.01" class="number-input mono border rounded px-2 py-1" value="20.00" />
+              <input id="sigma" type="number" step="0.01" class="number-input mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="20.00" />
               <input id="sigma_range" type="range" min="1" max="300" step="0.5" class="flex-1" value="20.00" />
             </div>
           </label>
         </div>
       </div>
 
-      <div class="p-4 bg-white rounded-2xl shadow">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h2 class="font-semibold mb-2">Chart Options</h2>
         <div class="space-y-3">
           <label class="block text-sm">Spot grid (% of S₀)
             <div class="grid grid-cols-2 gap-2 mt-1">
               <div>
                 <span class="text-xs">Min</span>
-                <input id="spot_min" type="number" step="1" class="w-full mono border rounded px-2 py-1" value="50" />
+                <input id="spot_min" type="number" step="1" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="50" />
               </div>
               <div>
                 <span class="text-xs">Max</span>
-                <input id="spot_max" type="number" step="1" class="w-full mono border rounded px-2 py-1" value="150" />
+                <input id="spot_max" type="number" step="1" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="150" />
               </div>
             </div>
           </label>
           <label class="block text-sm"># of points
-            <input id="npoints" type="number" min="50" max="2000" step="10" class="number-input mono border rounded px-2 py-1 mt-1" value="200" />
+            <input id="npoints" type="number" min="50" max="2000" step="10" class="number-input mono border rounded px-2 py-1 mt-1 bg-white dark:bg-slate-700" value="200" />
           </label>
           <label class="block text-sm">Vol bumps for Price vs Spot (abs, %, comma-separated)
-            <input id="vol_bumps" type="text" class="w-full mono border rounded px-2 py-1 mt-1" value="-10,0,10" />
+            <input id="vol_bumps" type="text" class="w-full mono border rounded px-2 py-1 mt-1 bg-white dark:bg-slate-700" value="-10,0,10" />
           </label>
-          <button id="downloadCsv" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white text-sm">Download Price-vs-Spot CSV</button>
+          <button id="downloadCsv" class="mt-3 px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm">Download Price-vs-Spot CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Greeks panel & parity -->
+    <section class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
+        <h3 class="font-semibold mb-3">Greeks (current inputs)</h3>
+        <dl class="grid grid-cols-2 gap-y-2 text-sm mono">
+          <dt>Price</dt><dd id="g_price">–</dd>
+          <dt>Delta</dt><dd id="g_delta">–</dd>
+          <dt>Gamma</dt><dd id="g_gamma">–</dd>
+          <dt>Vega (/1%)</dt><dd id="g_vega">–</dd>
+          <dt>Theta (/day)</dt><dd id="g_theta">–</dd>
+          <dt>ρ (rho, /1%)</dt><dd id="g_rho">–</dd>
+        </dl>
+      </div>
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow md:col-span-2">
+        <h3 class="font-semibold mb-3">Put–Call Parity Check</h3>
+        <p class="text-sm">Checks: C − P − (S e^{-qT} − K e^{-rT}) ≈ 0</p>
+        <div class="mt-2 flex items-center gap-3">
+          <span class="text-sm">|diff| = <span id="parity_diff" class="mono">–</span></span>
+          <span id="parity_badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-700">–</span>
         </div>
       </div>
     </section>
 
     <!-- Charts -->
     <section class="grid lg:grid-cols-2 gap-6">
-      <div class="p-4 bg-white rounded-2xl shadow">
-        <h3 class="font-semibold mb-2">1) Call Price vs Spot (today)</h3>
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">1) Price vs Spot (today)</h3>
         <div id="chart_price_spot" class="w-full" style="height:360px;"></div>
       </div>
-      <div class="p-4 bg-white rounded-2xl shadow">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h3 class="font-semibold mb-2">2) Time Decay: Price vs Days (S & σ frozen)</h3>
         <div id="chart_time_decay" class="w-full" style="height:360px;"></div>
       </div>
-      <div class="p-4 bg-white rounded-2xl shadow">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h3 class="font-semibold mb-2">3) Delta vs Spot (today)</h3>
         <div id="chart_delta_spot" class="w-full" style="height:360px;"></div>
       </div>
-      <div class="p-4 bg-white rounded-2xl shadow">
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
         <h3 class="font-semibold mb-2">4) Payoff at Expiry</h3>
         <div id="chart_payoff" class="w-full" style="height:360px;"></div>
       </div>
     </section>
 
-    <footer class="text-xs text-slate-500 mt-8">BSM call with continuous dividend yield. Educational use only.</footer>
+    <!-- Scenario table generator -->
+    <section class="mt-8 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow">
+      <h3 class="font-semibold mb-2">Scenario Table Generator</h3>
+      <div class="grid md:grid-cols-4 gap-3 text-sm">
+        <label>Spot moves (% of S₀, comma)
+          <input id="sc_spot_moves" type="text" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="-20,-10,0,10,20" />
+        </label>
+        <label>Vol bumps (abs, %, comma)
+          <input id="sc_vol_bumps" type="text" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="-10,0,10" />
+        </label>
+        <label>Days elapsed (comma)
+          <input id="sc_days_elapsed" type="text" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="0,7,14,21" />
+        </label>
+        <label>Max preview rows
+          <input id="sc_preview_n" type="number" class="w-full mono border rounded px-2 py-1 bg-white dark:bg-slate-700" value="100" />
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="sc_generate" class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm">Generate & Download CSV</button>
+        <span class="text-xs text-slate-600 dark:text-slate-400">Columns: type,S,K,r,q,sigma(%),T(days init),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)</span>
+      </div>
+      <div class="mt-4 overflow-auto">
+        <table class="min-w-full text-xs mono">
+          <thead class="text-left">
+            <tr>
+              <th class="p-1">type</th><th class="p-1">S</th><th class="p-1">sigma%</th><th class="p-1">days_elap</th><th class="p-1">Price</th><th class="p-1">Delta</th><th class="p-1">Gamma</th><th class="p-1">Vega/1%</th><th class="p-1">Theta/day</th>
+            </tr>
+          </thead>
+          <tbody id="sc_preview"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="text-xs text-slate-500 dark:text-slate-400 mt-8">BSM European options with continuous dividend yield. Educational use only.</footer>
   </main>
 
   <script>
@@ -130,45 +203,68 @@
       return sign * y;
     }
     function normCdf(x) { return 0.5 * (1 + erf(x / Math.SQRT2)); }
+    function normPdf(x) { return Math.exp(-0.5*x*x) / Math.sqrt(2*Math.PI); }
 
-    // Black–Scholes call with continuous dividend yield
-    function bsCall(S, K, r, q, sigma, T) {
+    // Black–Scholes with continuous dividend yield; returns Greeks for chosen type
+    function bsOption(S, K, r, q, sigma, T, type) {
       S = Math.max(1e-12, Number(S));
       K = Math.max(1e-12, Number(K));
       r = Number(r); q = Number(q); sigma = Math.max(1e-12, Number(sigma)); T = Math.max(0, Number(T));
 
+      const discR = Math.exp(-r*T);
+      const discQ = Math.exp(-q*T);
+
       if (T === 0) {
-        const payoff = Math.max(S - K, 0);
-        const delta = S > K ? 1 : (S < K ? 0 : 0.5);
-        return { price: payoff, delta };
+        // intrinsic & simple limits at expiry
+        const payoffCall = Math.max(S - K, 0);
+        const payoffPut  = Math.max(K - S, 0);
+        const price = type === 'call' ? payoffCall : payoffPut;
+        const delta = type === 'call' ? (S > K ? 1 : (S < K ? 0 : 0.5)) : (S < K ? -1 : (S > K ? 0 : -0.5));
+        const gamma = 0; const vega = 0; const theta = 0; const rho = type==='call'? -K*discR : K*discR; // not meaningful at T=0
+        return { price, delta, gamma, vega, theta, rho, d1: NaN, d2: NaN };
       }
+
       const sqrtT = Math.sqrt(T);
       const d1 = (Math.log(S/K) + (r - q + 0.5*sigma*sigma)*T) / (sigma*sqrtT);
       const d2 = d1 - sigma*sqrtT;
-      const Nd1 = normCdf(d1);
-      const Nd2 = normCdf(d2);
-      const discR = Math.exp(-r*T);
-      const discQ = Math.exp(-q*T);
-      const price = S*discQ*Nd1 - K*discR*Nd2;
-      const delta = discQ*Nd1;
-      return { price, delta };
+      const Nd1 = normCdf(d1), Nd2 = normCdf(d2);
+      const Nmd1 = normCdf(-d1), Nmd2 = normCdf(-d2);
+      const nd1 = normPdf(d1);
+
+      let price, delta, theta, rho;
+      const gamma = (discQ * nd1) / (S * sigma * sqrtT);
+      const vega = S * discQ * nd1 * sqrtT; // per vol = 1.0 (e.g., 0.01 => vega/1%)
+
+      if (type === 'call') {
+        price = S*discQ*Nd1 - K*discR*Nd2;
+        delta = discQ * Nd1;
+        theta = -(S*discQ*nd1*sigma)/(2*sqrtT) - r*K*discR*Nd2 + q*S*discQ*Nd1; // per year
+        rho   = K*T*discR*Nd2; // per 1.0 in r
+      } else {
+        price = K*discR*Nmd2 - S*discQ*Nmd1;
+        delta = discQ * (Nd1 - 1);
+        theta = -(S*discQ*nd1*sigma)/(2*sqrtT) + r*K*discR*Nmd2 - q*S*discQ*Nmd1; // per year
+        rho   = -K*T*discR*Nmd2;
+      }
+
+      return { price, delta, gamma, vega, theta, rho, d1, d2 };
     }
 
     // ---------- UI state & bindings ----------
-    const ids = ["S0","K","T_days","r","q","sigma","spot_min","spot_max","npoints","vol_bumps"];
-    const state = Object.fromEntries(ids.map(id => [id, null]));
+    const ids = ["S0","K","T_days","r","q","sigma","spot_min","spot_max","npoints","vol_bumps","opt_type"];
 
     function getVal(id) {
       const el = document.getElementById(id);
       if (!el) return null;
-      if (id === 'vol_bumps') return el.value;
+      if (id === 'vol_bumps' || id.startsWith('sc_')) return el.value;
+      if (id === 'opt_type') return el.value;
       return Number(el.value);
     }
 
     function syncPair(idNum, idRange) {
       const num = document.getElementById(idNum);
       const rng = document.getElementById(idRange);
-      const sync = (from, to) => () => { to.value = from.value; drawAll(); };
+      const sync = (from, to) => () => { to.value = from.value; drawAll(); saveStateToUrl(); };
       num.addEventListener('input', sync(num, rng));
       rng.addEventListener('input', sync(rng, num));
     }
@@ -180,35 +276,54 @@
     syncPair('q','q_range');
     syncPair('sigma','sigma_range');
 
-    // CSV download (Price vs Spot table at current settings)
+    document.getElementById('opt_type').addEventListener('change', () => { drawAll(); saveStateToUrl(); });
+
+    // Dark mode toggle
+    const root = document.documentElement;
+    function setDark(enabled) {
+      if (enabled) root.classList.add('dark'); else root.classList.remove('dark');
+      localStorage.setItem('bsm_dark', enabled ? '1' : '0');
+    }
+    document.getElementById('toggleDark').addEventListener('click', () => {
+      const enabled = !root.classList.contains('dark');
+      setDark(enabled);
+    });
+    // init dark
+    setDark(localStorage.getItem('bsm_dark') !== '0');
+
+    // CSV download (Price vs Spot table at current settings, first trace)
     document.getElementById('downloadCsv').addEventListener('click', () => {
       const p = currentParams();
       const { S_grid, traces } = priceVsSpotData(p);
-      // Use first trace only (base sigma) for table; could expand if desired
-      const baseTrace = traces.find(t => t.name.includes('σ=')) || traces[0];
+      const baseTrace = traces[0];
       const rows = ['S,Price'];
       for (let i=0; i<S_grid.length; i++) rows.push(`${S_grid[i]},${baseTrace.y[i]}`);
-      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      downloadCsv(rows.join('\n'), 'price_vs_spot.csv');
+    });
+
+    function downloadCsv(text, filename) {
+      const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'price_vs_spot.csv'; a.click();
+      a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
-    });
+    }
 
     // ---------- Chart data generators ----------
     function currentParams() {
       return {
-        S0: getVal('S0'),
-        K: getVal('K'),
-        T_days: getVal('T_days'),
-        r: getVal('r')/100.0,
-        q: getVal('q')/100.0,
-        sigma0: getVal('sigma')/100.0,
-        spotMinPct: getVal('spot_min')/100.0,
-        spotMaxPct: getVal('spot_max')/100.0,
-        n: Math.max(10, Math.floor(getVal('npoints'))),
+        S0: Number(document.getElementById('S0').value),
+        K: Number(document.getElementById('K').value),
+        T_days: Number(document.getElementById('T_days').value),
+        r: Number(document.getElementById('r').value)/100.0,
+        q: Number(document.getElementById('q').value)/100.0,
+        sigma0: Number(document.getElementById('sigma').value)/100.0,
+        spotMinPct: Number(document.getElementById('spot_min').value)/100.0,
+        spotMaxPct: Number(document.getElementById('spot_max').value)/100.0,
+        n: Math.max(10, Math.floor(Number(document.getElementById('npoints').value))),
         volBumpsPct: document.getElementById('vol_bumps').value
-          .split(',').map(s=>s.trim()).filter(Boolean).map(Number).map(v=>v/100.0)
+          .split(',').map(s=>s.trim()).filter(Boolean).map(Number).map(v=>v/100.0),
+        type: document.getElementById('opt_type').value
       };
     }
 
@@ -224,10 +339,9 @@
       const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
       const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
       const S_grid = linspace(Smin, Smax, p.n);
-      const sigmas = p.volBumpsPct.map(b => Math.max(1e-9, p.sigma0 + b));
-      if (sigmas.length === 0) sigmas.push(p.sigma0);
+      const sigmas = (p.volBumpsPct.length ? p.volBumpsPct : [0]).map(b => Math.max(1e-9, p.sigma0 + b));
       const traces = sigmas.map(sg => {
-        const y = S_grid.map(S => bsCall(S, p.K, p.r, p.q, sg, T).price);
+        const y = S_grid.map(S => bsOption(S, p.K, p.r, p.q, sg, T, p.type).price);
         return { x: S_grid, y, mode: 'lines', name: `σ=${(sg*100).toFixed(2)}%` };
       });
       return { S_grid, traces };
@@ -237,7 +351,7 @@
       const days = linspace(0, p.T_days, p.n);
       const prices = days.map(d => {
         const T = yearfracFromDays(Math.max(0, p.T_days - d));
-        return bsCall(p.S0, p.K, p.r, p.q, p.sigma0, T).price;
+        return bsOption(p.S0, p.K, p.r, p.q, p.sigma0, T, p.type).price;
       });
       return { x: days, y: prices };
     }
@@ -247,7 +361,7 @@
       const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
       const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
       const S_grid = linspace(Smin, Smax, p.n);
-      const deltas = S_grid.map(S => bsCall(S, p.K, p.r, p.q, p.sigma0, T).delta);
+      const deltas = S_grid.map(S => bsOption(S, p.K, p.r, p.q, p.sigma0, T, p.type).delta);
       return { x: S_grid, y: deltas };
     }
 
@@ -255,8 +369,33 @@
       const Smin = Math.max(1e-9, p.S0 * p.spotMinPct);
       const Smax = Math.max(Smin*1.0001, p.S0 * p.spotMaxPct);
       const S_grid = linspace(Smin, Smax, p.n);
-      const y = S_grid.map(S => Math.max(S - p.K, 0));
+      const y = S_grid.map(S => p.type === 'call' ? Math.max(S - p.K, 0) : Math.max(p.K - S, 0));
       return { x: S_grid, y };
+    }
+
+    function updateGreeksPanel() {
+      const p = currentParams();
+      const T = yearfracFromDays(p.T_days);
+      const g = bsOption(p.S0, p.K, p.r, p.q, p.sigma0, T, p.type);
+      const fmt = (x) => (Math.abs(x) < 1e-12 ? '0' : x.toFixed(6));
+      document.getElementById('g_price').textContent = fmt(g.price);
+      document.getElementById('g_delta').textContent = fmt(g.delta);
+      document.getElementById('g_gamma').textContent = fmt(g.gamma);
+      document.getElementById('g_vega').textContent  = fmt(g.vega/100); // per 1% vol
+      document.getElementById('g_theta').textContent = fmt(g.theta/365); // per day
+      document.getElementById('g_rho').textContent   = fmt(g.rho/100);   // per 1% r
+
+      // Parity check uses both C and P irrespective of selection
+      const call = bsOption(p.S0, p.K, p.r, p.q, p.sigma0, T, 'call').price;
+      const put  = bsOption(p.S0, p.K, p.r, p.q, p.sigma0, T, 'put').price;
+      const discR = Math.exp(-p.r*T), discQ = Math.exp(-p.q*T);
+      const diff = call - (put + p.S0*discQ - p.K*discR);
+      const adiff = Math.abs(diff);
+      const badge = document.getElementById('parity_badge');
+      document.getElementById('parity_diff').textContent = diff.toExponential(3);
+      if (adiff < 1e-10) { badge.textContent = 'OK'; badge.style.background = '#16a34a33'; }
+      else if (adiff < 1e-6) { badge.textContent = 'Tight'; badge.style.background = '#84cc1633'; }
+      else { badge.textContent = 'Off'; badge.style.background = '#ef444433'; }
     }
 
     // ---------- Plotting ----------
@@ -268,7 +407,7 @@
       Plotly.react('chart_price_spot', pvs.traces, {
         margin: { t: 10, r: 10, l: 50, b: 40 },
         xaxis: { title: 'Spot' },
-        yaxis: { title: 'Call Price' },
+        yaxis: { title: `${p.type==='call'?'Call':'Put'} Price` },
         legend: { orientation: 'h' },
         hovermode: 'x unified'
       }, { displayModeBar: false, responsive: true });
@@ -278,7 +417,7 @@
       Plotly.react('chart_time_decay', [{ x: td.x, y: td.y, mode: 'lines', name: 'Price' }], {
         margin: { t: 10, r: 10, l: 50, b: 40 },
         xaxis: { title: 'Days elapsed' },
-        yaxis: { title: 'Call Price' },
+        yaxis: { title: `${p.type==='call'?'Call':'Put'} Price` },
         hovermode: 'x unified'
       }, { displayModeBar: false, responsive: true });
 
@@ -287,7 +426,7 @@
       Plotly.react('chart_delta_spot', [{ x: ds.x, y: ds.y, mode: 'lines', name: 'Δ' }], {
         margin: { t: 10, r: 10, l: 50, b: 40 },
         xaxis: { title: 'Spot' },
-        yaxis: { title: 'Delta', range: [0,1] },
+        yaxis: { title: 'Delta', range: [-1,1] },
         hovermode: 'x unified'
       }, { displayModeBar: false, responsive: true });
 
@@ -299,17 +438,89 @@
         yaxis: { title: 'Payoff' },
         hovermode: 'x unified'
       }, { displayModeBar: false, responsive: true });
+
+      updateGreeksPanel();
     }
 
-    // Re-draw on any input change
-    document.addEventListener('input', (e) => {
-      const id = e.target.id; if (!ids.includes(id) && !id.endsWith('_range')) return; drawAll();
+    // Scenario table generator
+    function parseCsvNumbers(str) {
+      return str.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
+    }
+
+    document.getElementById('sc_generate').addEventListener('click', () => {
+      const p = currentParams();
+      const moves = parseCsvNumbers(document.getElementById('sc_spot_moves').value); // %
+      const bumps = parseCsvNumbers(document.getElementById('sc_vol_bumps').value).map(v=>v/100); // abs % -> frac
+      const daysE = parseCsvNumbers(document.getElementById('sc_days_elapsed').value);
+      const previewN = Math.max(1, Number(document.getElementById('sc_preview_n').value)|0);
+
+      const rows = ['type,S,K,r,q,sigma(%),T_init(days),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)'];
+      const preview = [];
+
+      for (const m of moves) {
+        const S = p.S0 * (1 + m/100);
+        for (const b of bumps.length?bumps:[0]) {
+          const sig = Math.max(1e-9, p.sigma0 + b);
+          for (const de of daysE) {
+            const T = yearfracFromDays(Math.max(0, p.T_days - de));
+            const g = bsOption(S, p.K, p.r, p.q, sig, T, p.type);
+            const row = [p.type, S.toFixed(6), p.K, (p.r*100).toFixed(4), (p.q*100).toFixed(4), (sig*100).toFixed(4), p.T_days, de, T.toFixed(6), m, S.toFixed(6), g.price.toFixed(6), g.delta.toFixed(6), g.gamma.toFixed(8), (g.vega/100).toFixed(6), (g.theta/365).toFixed(6)].join(',');
+            rows.push(row);
+            if (preview.length < previewN) preview.push({type:p.type,S,sigma:sig*100,days:de,price:g.price,delta:g.delta,gamma:g.gamma,vega:g.vega/100,theta:g.theta/365});
+          }
+        }
+      }
+
+      // Update preview table
+      const tbody = document.getElementById('sc_preview');
+      tbody.innerHTML = preview.map(r => `<tr>
+        <td class="p-1">${r.type}</td>
+        <td class="p-1">${r.S.toFixed(4)}</td>
+        <td class="p-1">${r.sigma.toFixed(2)}</td>
+        <td class="p-1">${r.days}</td>
+        <td class="p-1">${r.price.toFixed(6)}</td>
+        <td class="p-1">${r.delta.toFixed(6)}</td>
+        <td class="p-1">${r.gamma.toFixed(8)}</td>
+        <td class="p-1">${r.vega.toFixed(6)}</td>
+        <td class="p-1">${r.theta.toFixed(6)}</td>
+      </tr>`).join('');
+
+      downloadCsv(rows.join('\n'), 'scenario_table.csv');
     });
 
-    // Initial draw
-    drawAll();
+    // Re-draw on any input change (including ranges)
+    document.addEventListener('input', (e) => {
+      const id = e.target.id; if (!id) return;
+      if (id.startsWith('sc_')) return; // scenario fields on demand
+      if (!['S0','K','T_days','r','q','sigma','spot_min','spot_max','npoints','vol_bumps','opt_type'].some(p=> id===p || id===p+"_range")) return;
+      drawAll(); saveStateToUrl();
+    });
 
-    // Handle resize
+    // ---------- URL state sharing ----------
+    function saveStateToUrl() {
+      const p = currentParams();
+      const qp = new URLSearchParams({
+        S0: p.S0, K: p.K, T: p.T_days, r: (p.r*100).toFixed(4), q: (p.q*100).toFixed(4), sigma: (p.sigma0*100).toFixed(4),
+        smin: (p.spotMinPct*100).toFixed(2), smax: (p.spotMaxPct*100).toFixed(2), n: p.n, vb: document.getElementById('vol_bumps').value, type: p.type
+      });
+      const url = new URL(window.location);
+      url.search = qp.toString();
+      history.replaceState(null, '', url);
+    }
+
+    function loadStateFromUrl() {
+      const sp = new URLSearchParams(window.location.search);
+      const setIf = (id, key, f=Number) => { if (sp.has(key)) { document.getElementById(id).value = f(sp.get(key)); const r = document.getElementById(id+"_range"); if (r) r.value = document.getElementById(id).value; } };
+      setIf('S0','S0'); setIf('K','K'); setIf('T_days','T');
+      setIf('r','r'); setIf('q','q'); setIf('sigma','sigma');
+      setIf('spot_min','smin'); setIf('spot_max','smax'); setIf('npoints','n');
+      if (sp.has('vb')) document.getElementById('vol_bumps').value = sp.get('vb');
+      if (sp.has('type')) document.getElementById('opt_type').value = sp.get('type');
+    }
+
+    // Initial load
+    loadStateFromUrl();
+    drawAll();
     window.addEventListener('resize', () => { drawAll(); });
   </script>
 </body>
