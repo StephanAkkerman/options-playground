@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Options Playground – Black–Scholes</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.plotly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script>
     // Tailwind dark mode via class strategy
     tailwind.config = { darkMode: 'class' }
@@ -298,7 +298,7 @@
       const baseTrace = traces[0];
       const rows = ['S,Price'];
       for (let i=0; i<S_grid.length; i++) rows.push(`${S_grid[i]},${baseTrace.y[i]}`);
-      downloadCsv(rows.join('\n'), 'price_vs_spot.csv');
+      downloadCsv(rows.join(''), 'price_vs_spot.csv');
     });
 
     function downloadCsv(text, filename) {
@@ -485,7 +485,7 @@
         <td class="p-1">${r.theta.toFixed(6)}</td>
       </tr>`).join('');
 
-      downloadCsv(rows.join('\n'), 'scenario_table.csv');
+      downloadCsv(rows.join(''), 'scenario_table.csv');
     });
 
     // Re-draw on any input change (including ranges)
