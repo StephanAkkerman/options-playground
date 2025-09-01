@@ -172,9 +172,11 @@
         </label>
       </div>
       <div class="mt-3 flex flex-wrap gap-2">
-        <button id="sc_generate" class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm">Generate & Download CSV</button>
-        <span class="text-xs text-slate-600 dark:text-slate-400">Columns: type,S,K,r,q,sigma(%),T(days init),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)</span>
-      </div>
+        <span class="text-xs text-slate-600 dark:text-slate-400">
+            Table auto-updates as you change inputs.
+            Columns: type,S,K,r,q,sigma(%),T(days init),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)
+        </span>
+        </div>
       <div class="mt-4 overflow-auto">
         <table class="min-w-full text-xs mono">
           <thead class="text-left">
@@ -276,7 +278,10 @@
     syncPair('q','q_range');
     syncPair('sigma','sigma_range');
 
-    document.getElementById('opt_type').addEventListener('change', () => { drawAll(); saveStateToUrl(); });
+    document.getElementById('opt_type').addEventListener('change', () => {
+        drawAll(); saveStateToUrl(); regenerateScenarioPreview();
+    });
+
 
     // Dark mode toggle
     const root = document.documentElement;
@@ -463,68 +468,78 @@
       el.classList.toggle('ring-red-500', !!hasInvalid);
     }
 
-    document.getElementById('sc_generate').addEventListener('click', () => {
-      const p = currentParams();
+    function regenerateScenarioPreview() {
+        const p = currentParams();
 
-      const moves = parseCsvNumbers(document.getElementById('sc_spot_moves').value);
-      const bumps = parseCsvNumbers(document.getElementById('sc_vol_bumps').value);
-      const daysE = parseCsvNumbers(document.getElementById('sc_days_elapsed').value);
-      const previewN = Math.max(1, Number(document.getElementById('sc_preview_n').value)|0);
+        const moves = parseCsvNumbers(document.getElementById('sc_spot_moves').value);
+        const bumps = parseCsvNumbers(document.getElementById('sc_vol_bumps').value);
+        const daysE = parseCsvNumbers(document.getElementById('sc_days_elapsed').value);
+        const previewN = Math.max(1, Number(document.getElementById('sc_preview_n').value) | 0);
 
-      // highlight invalid inputs (trailing commas, text, blanks, etc.)
-      markValidity('sc_spot_moves', moves.invalid.length > 0);
-      markValidity('sc_vol_bumps', bumps.invalid.length > 0);
-      markValidity('sc_days_elapsed', daysE.invalid.length > 0);
+        // highlight invalid tokens
+        markValidity('sc_spot_moves', moves.invalid.length > 0);
+        markValidity('sc_vol_bumps',  bumps.invalid.length > 0);
+        markValidity('sc_days_elapsed', daysE.invalid.length > 0);
 
-      // fallbacks so we still generate something
-      const moveVals = moves.values.length ? moves.values : [0];
-      const bumpVals = bumps.values.length ? bumps.values.map(v=>v/100) : [0];
-      const dayVals  = daysE.values.length ? daysE.values : [0];
+        // fallbacks so we always render something
+        const moveVals = moves.values.length ? moves.values : [0];
+        const bumpVals = bumps.values.length ? bumps.values.map(v => v / 100) : [0];
+        const dayVals  = daysE.values.length  ? daysE.values  : [0];
 
-      const rows = ['type,S,K,r,q,sigma(%),T_init(days),days_elapsed,T(years),S_move(%),S,Price,Delta,Gamma,Vega(/1%),Theta(/day)'];
-      const preview = [];
+        const preview = [];
 
-      for (const m of moveVals) {
-        const S = p.S0 * (1 + m/100);
-        for (const b of bumpVals) {
-          const sig = Math.max(1e-9, p.sigma0 + b);
-          for (const de of dayVals) {
-            const T = yearfracFromDays(Math.max(0, p.T_days - de));
-            const g = bsOption(S, p.K, p.r, p.q, sig, T, p.type);
-            const row = [p.type, S.toFixed(6), p.K, (p.r*100).toFixed(4), (p.q*100).toFixed(4), (sig*100).toFixed(4), p.T_days, de, T.toFixed(6), m, S.toFixed(6), g.price.toFixed(6), g.delta.toFixed(6), g.gamma.toFixed(8), (g.vega/100).toFixed(6), (g.theta/365).toFixed(6)].join(',');
-            rows.push(row);
-            if (preview.length < previewN) preview.push({type:p.type,S,sigma:sig*100,days:de,price:g.price,delta:g.delta,gamma:g.gamma,vega:g.vega/100,theta:g.theta/365});
-          }
+        for (const m of moveVals) {
+            const S = p.S0 * (1 + m / 100);
+            for (const b of bumpVals) {
+            const sig = Math.max(1e-9, p.sigma0 + b);
+            for (const de of dayVals) {
+                const T = yearfracFromDays(Math.max(0, p.T_days - de));
+                const g = bsOption(S, p.K, p.r, p.q, sig, T, p.type);
+                if (preview.length < previewN) {
+                preview.push({
+                    type: p.type, S,
+                    sigma: sig * 100, days: de,
+                    price: g.price, delta: g.delta, gamma: g.gamma,
+                    vega: g.vega / 100, theta: g.theta / 365
+                });
+                }
+            }
+            }
         }
-      }
 
-      // Update preview table
-      const tbody = document.getElementById('sc_preview');
-      if (preview.length === 0) {
-        tbody.innerHTML = '<tr><td class="p-1 text-slate-500" colspan="9">No rows generated — check inputs above.</td></tr>';
-      } else {
-        tbody.innerHTML = preview.map(r => `<tr>
-          <td class=\"p-1\">${r.type}</td>
-          <td class=\"p-1\">${r.S.toFixed(4)}</td>
-          <td class=\"p-1\">${r.sigma.toFixed(2)}</td>
-          <td class=\"p-1\">${r.days}</td>
-          <td class=\"p-1\">${r.price.toFixed(6)}</td>
-          <td class=\"p-1\">${r.delta.toFixed(6)}</td>
-          <td class=\"p-1\">${r.gamma.toFixed(8)}</td>
-          <td class=\"p-1\">${r.vega.toFixed(6)}</td>
-          <td class=\"p-1\">${r.theta.toFixed(6)}</td>
-        </tr>`).join('');
-      }
-
-      downloadCsv(rows.join('\n'), 'scenario_table.csv');
-    });
+        const tbody = document.getElementById('sc_preview');
+        if (preview.length === 0) {
+            tbody.innerHTML = '<tr><td class="p-1 text-slate-500" colspan="9">No rows generated — check inputs above.</td></tr>';
+        } else {
+            tbody.innerHTML = preview.map(r => `
+            <tr>
+                <td class="p-1">${r.type}</td>
+                <td class="p-1">${r.S.toFixed(4)}</td>
+                <td class="p-1">${r.sigma.toFixed(2)}</td>
+                <td class="p-1">${r.days}</td>
+                <td class="p-1">${r.price.toFixed(6)}</td>
+                <td class="p-1">${r.delta.toFixed(6)}</td>
+                <td class="p-1">${r.gamma.toFixed(8)}</td>
+                <td class="p-1">${r.vega.toFixed(6)}</td>
+                <td class="p-1">${r.theta.toFixed(6)}</td>
+            </tr>
+            `).join('');
+        }
+        }
 
     // Re-draw on any input change (including ranges)
     document.addEventListener('input', (e) => {
-      const id = e.target.id; if (!id) return;
-      if (id.startsWith('sc_')) return; // scenario fields on demand
-      if (!['S0','K','T_days','r','q','sigma','spot_min','spot_max','npoints','vol_bumps','opt_type'].some(p=> id===p || id===p+"_range")) return;
-      drawAll(); saveStateToUrl();
+        const id = e.target.id || '';
+        if (id.startsWith('sc_')) {            // scenario inputs
+            regenerateScenarioPreview();
+            return;
+        }
+        const keys = ['S0','K','T_days','r','q','sigma','spot_min','spot_max','npoints','vol_bumps','opt_type'];
+        if (!keys.some(p => id === p || id === p + '_range')) return;
+
+        drawAll();
+        saveStateToUrl();
+        regenerateScenarioPreview();           // scenario depends on base params too
     });
 
     // ---------- URL state sharing ----------
@@ -552,6 +567,7 @@
     // Initial load
     loadStateFromUrl();
     drawAll();
+    regenerateScenarioPreview();
     window.addEventListener('resize', () => { drawAll(); });
   </script>
 </body>
